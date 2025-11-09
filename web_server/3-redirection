@@ -1,37 +1,25 @@
 #!/usr/bin/env bash
-# Configure Nginx to redirect /redirect_me to a YouTube link using HTTP 301
+# This script configures Nginx to redirect /redirect_me with a 301 Moved Permanently
 
-set -e
-
-# Update package index and install nginx if not installed
+# Install Nginx if not already installed
 apt-get update -y
 apt-get install -y nginx
 
-# Ensure Nginx default site directory exists
-DEFAULT_CONF="/etc/nginx/sites-available/default"
+# Define the redirect target
+REDIRECT_URL="https://www.youtube.com/watch?v=QH2-TGUlwu4"
 
-# Overwrite the default config with a guaranteed working server block
-cat > $DEFAULT_CONF << 'EOF'
-server {
-    listen 80 default_server;
-    listen [::]:80 default_server;
+# Create a temporary Nginx config file
+NGINX_CONF="/etc/nginx/sites-available/default"
 
-    root /var/www/html;
-    index index.html index.htm index.nginx-debian.html;
+# Use sed to insert redirect configuration for /redirect_me
+# Backup original config first
+cp $NGINX_CONF "${NGINX_CONF}.bak"
 
-    server_name _;
+# Remove existing redirect_me block if any
+sed -i '/location \/redirect_me {/,/}/d' $NGINX_CONF
 
-    location / {
-        try_files $uri $uri/ =404;
-    }
+# Add new redirect block inside the server { } block
+sed -i "/server_name _;/a \\\n    location /redirect_me {\n        return 301 $REDIRECT_URL;\n    }" $NGINX_CONF
 
-    location /redirect_me {
-        return 301 https://www.youtube.com/watch?v=QH2-TGUlwu4;
-    }
-}
-EOF
-# Test nginx config syntax
-nginx -t
-
-# Restart nginx to apply changes
-systemctl restart nginx
+# Test Nginx config and reload
+nginx -t && systemctl reload nginx
