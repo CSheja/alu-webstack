@@ -1,0 +1,32 @@
+#!/bin/bash
+# 3-redirection: Configure Nginx to redirect /redirect_me to another page with 301
+
+# Update package index
+sudo apt update -y
+
+# Install Nginx if not already installed
+sudo apt install -y nginx
+
+# Ensure Nginx is running
+sudo systemctl enable nginx
+sudo systemctl start nginx
+
+# Backup default config if not already backed up
+if [ ! -f /etc/nginx/sites-available/default.bak ]; then
+    sudo cp /etc/nginx/sites-available/default /etc/nginx/sites-available/default.bak
+fi
+
+# Remove existing /redirect_me blocks
+sudo sed -i '/location \/redirect_me {/,/}/d' /etc/nginx/sites-available/default
+
+# Append new redirect configuration at the end of server block
+sudo sed -i '/server_name _;/a \
+    location /redirect_me { \
+        return 301 https://www.youtube.com/watch?v=QH2-TGUlwu4; \
+    }' /etc/nginx/sites-available/default
+
+# Test Nginx configuration
+sudo nginx -t
+
+# Reload Nginx to apply changes
+sudo systemctl reload nginx
