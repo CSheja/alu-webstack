@@ -1,25 +1,30 @@
 #!/usr/bin/env bash
-# This script configures Nginx to redirect /redirect_me with a 301 Moved Permanently
+# Configure Nginx to redirect /redirect_me to a YouTube URL with a 301 Moved Permanently
 
-# Install Nginx if not already installed
+# Exit immediately if a command fails
+set -e
+
+# Update package list and install Nginx if not installed
 apt-get update -y
-apt-get install -y nginx
+if ! command -v nginx >/dev/null 2>&1; then
+	    apt-get install -y nginx
+fi
 
-# Define the redirect target
-REDIRECT_URL="https://www.youtube.com/watch?v=QH2-TGUlwu4"
+# Ensure default web root exists
+mkdir -p /var/www/html
+echo "Holberton School" > /var/www/html/index.html
 
-# Create a temporary Nginx config file
+# Nginx default site config file
 NGINX_CONF="/etc/nginx/sites-available/default"
 
-# Use sed to insert redirect configuration for /redirect_me
-# Backup original config first
-cp $NGINX_CONF "${NGINX_CONF}.bak"
+# Remove any previous /redirect_me configuration to avoid duplicates
+sed -i '/location \/redirect_me {/,/}/d' "$NGINX_CONF"
 
-# Remove existing redirect_me block if any
-sed -i '/location \/redirect_me {/,/}/d' $NGINX_CONF
+# Add /redirect_me redirect to YouTube (301)
+sed -i '/server_name _;/a \ \n\tlocation /redirect_me {\n\t\treturn 301 https://www.youtube.com/watch?v=QH2-TGUlwu4;\n\t}' "$NGINX_CONF"
 
-# Add new redirect block inside the server { } block
-sed -i "/server_name _;/a \\\n    location /redirect_me {\n        return 301 $REDIRECT_URL;\n    }" $NGINX_CONF
+# Test Nginx configuration
+nginx -t
 
-# Test Nginx config and reload
-nginx -t && systemctl reload nginx
+# Restart Nginx to apply changes
+systemctl restart nginx
